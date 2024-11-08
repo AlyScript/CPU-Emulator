@@ -1,0 +1,19 @@
+<map id="InstructionBase" name="InstructionBase">
+<area shape="rect" id="Node000001" title=" " alt="" coords="227,5,349,31"/>
+<area shape="rect" id="Node000002" href="$classIadd.html" title=" " alt="" coords="5,79,56,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="232,37,69,81,57,85,56,80,67,76,230,32"/>
+<area shape="rect" id="Node000003" href="$classIand.html" title=" " alt="" coords="80,79,131,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="247,38,132,83,130,78,245,33"/>
+<area shape="rect" id="Node000004" href="$classIjmp.html" title=" " alt="" coords="155,79,205,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="261,40,199,81,196,76,258,36"/>
+<area shape="rect" id="Node000005" href="$classIjne.html" title=" " alt="" coords="230,79,277,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="279,44,261,80,257,77,274,42"/>
+<area shape="rect" id="Node000006" href="$classIldr.html" title=" " alt="" coords="301,79,344,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="302,42,319,77,315,80,297,44"/>
+<area shape="rect" id="Node000007" href="$classIorr.html" title=" " alt="" coords="369,79,413,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="317,36,375,76,372,81,314,41"/>
+<area shape="rect" id="Node000008" href="$classIstr.html" title=" " alt="" coords="437,79,480,104"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="329,33,438,79,436,84,327,38"/>
+<area shape="rect" id="Node000009" href="$classIxor.html" title=" " alt="" coords="505,79,551,104"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="342,32,493,76,505,80,504,85,491,81,340,37"/>
+</map>
