@@ -3,28 +3,29 @@
 #include <cstdlib>
 #include <cstring>
 #include <utility>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 #include "emulator.h"
 
 // ============= Breakpoint ==============
-Breakpoint::Breakpoint() { }
+Breakpoint::Breakpoint() : _address(0), _name("") { }
 
-Breakpoint::Breakpoint(addr_t address, const char* name) {
-  _address = address & ARCH_BITMASK;
-  _name = (char *)malloc(strlen(name) + 1);
-  strcpy(_name, name);
+Breakpoint::Breakpoint(addr_t address, const std::string& name) 
+    : _address(address & ARCH_BITMASK), _name(name) {
+  
 }
 
 // Copy constructor
-Breakpoint::Breakpoint(const Breakpoint& other) {
-  _address = other._address;
-  _name = (char *)malloc(strlen(other._name) + 1);
-  strcpy(_name, other._name);
+Breakpoint::Breakpoint(const Breakpoint& other) 
+    : _address(other._address), _name(other._name) {
+  
 }
 
 // Move constructor
-Breakpoint::Breakpoint(Breakpoint&& other) noexcept {
-  std::swap(_address, other._address);
-  std::swap(_name, other._name);
+Breakpoint::Breakpoint(Breakpoint&& other) noexcept 
+    : _address(std::move(other._address)), _name(std::move(other._name)) {
+   
 }
 
 // Copy assignment
@@ -32,15 +33,19 @@ Breakpoint& Breakpoint::operator=(const Breakpoint& other) {
   if (this == &other)
     return *this;
   _address = other._address;
-  _name = (char *)malloc(strlen(other._name) + 1);
-  strcpy(_name, other._name);
+  _name = other._name;
   return *this;
 }
 
 // Move assignment
 Breakpoint& Breakpoint::operator=(Breakpoint&& other) noexcept {
-  std::swap(_address, other._address);
-  std::swap(_name, other._name);
+  if (&other != this) {
+    _address = std::move(other._address);
+    _name = std::move(other._name);
+
+    other._address = 0;
+    other._name.clear();
+  }
   return *this;
 }
 
@@ -48,7 +53,7 @@ addr_t Breakpoint::get_address() const {
   return _address;
 }
 
-const char* Breakpoint::get_name() const {
+const std::string Breakpoint::get_name() const {
   return _name;
 }
 
@@ -56,8 +61,8 @@ int Breakpoint::has(addr_t address) const {
   return _address == (address & ARCH_BITMASK);
 }
 
-int Breakpoint::has(const char* name) const {
-  return strcmp(_name, name) == 0;
+int Breakpoint::has(const std::string& name) const {
+  return _name == name;
 }
 
 // ============= Emulator ==============
@@ -100,7 +105,7 @@ Emulator& Emulator::operator=(const Emulator& other) {
     return *this;
 
   state = other.state;
-  breakpoints = new Breakpoint[MAX_INSTRUCTIONS];
+  breakpoints = {};
   breakpoints_sz = other.breakpoints_sz;
   total_cycles = other.total_cycles;
 
@@ -179,7 +184,7 @@ int Emulator::run(int steps) {
 
 // ----------> Breakpoint management
 
-int Emulator::insert_breakpoint(addr_t address, const char* name) {
+int Emulator::insert_breakpoint(addr_t address, std::string name) {
   // breakpoints is full (should never happen though!)
   if (breakpoints_sz == MAX_INSTRUCTIONS)
     return 0;
@@ -211,7 +216,7 @@ const Breakpoint* Emulator::find_breakpoint(addr_t address) const {
 }
 
 // Basically the same as above, but for the name
-const Breakpoint* Emulator::find_breakpoint(const char* name) const {
+const Breakpoint* Emulator::find_breakpoint(const std::string name) const {
   for (int idx = 0; idx < breakpoints_sz; ++idx) {
     if (breakpoints[idx].has(name)) {
       return &breakpoints[idx];
@@ -305,93 +310,187 @@ int Emulator::print_program() const {
     data.address = state.memory[offset + 1];
     InstructionBase* instr = decode(data);
 
-    if ((instr == NULL) || (data.opcode == 0 && data.address == 0))
-      printf("%d:\t%d\t%d\n", offset, data.opcode, data.address);
+    if ((instr == NULL) || (data.opcode == 0 && data.address == 0)) {
+      // printf("%d:\t%d\t%d\n", offset, data.opcode, data.address);
+      std::cout << offset << ":\t" << static_cast<int>(data.opcode) << "\t" << static_cast<int>(data.address) << std::endl;
+    }
     else 
-      printf("%d:\t%d\t%d\t:\t%s\n", offset, data.opcode, data.address, instr->to_string());
+      // printf("%d:\t%d\t%d\t:\t%s\n", offset, data.opcode, data.address, instr->to_string());
+      std::cout << offset << ":\t" << static_cast<int>(data.opcode) << "\t" << static_cast<int>(data.address) << "\t:\t" << instr->to_string() << std::endl;
   }
   return 1;
 }
 
-int Emulator::load_state(const char* filename) {
+int Emulator::load_state(const std::string filename) {
   // Delete all breakpoints
   breakpoints_sz = 0;
 
   int read = 0;
-  FILE *fp = fopen(filename, "r");
 
-  if (fp == NULL)
+  std::ifstream file(filename);
+
+  if (!file)
     return 0;
 
-  // Make sure that each fscanf reads the right number of items
-  read = fscanf(fp, "%d\n", &total_cycles);
-  if ((read != 1) || (total_cycles < 0))
-    return 0;
+  std::string line;
+  if (std::getline(file, line) && !line.empty()) {
+    std::istringstream iss(line);
+    if (!(iss >> total_cycles) || total_cycles < 0) 
+      return 0;
+  } else
+      return 0;
 
-  read = fscanf(fp, "%d\n", &state.acc);
-  if ((read != 1) || (state.acc > ARCH_MAXVAL) || (state.acc < 0))
-    return 0;
+  if (std::getline(file, line)) {
+    std::istringstream iss(line);
+    if (!(iss >> state.acc) || state.acc > ARCH_MAXVAL || state.acc < 0) 
+      return 0;
+  } else 
+      return 0;
 
-  read = fscanf(fp, "%d\n", &state.pc);
-  if ((read != 1) || (state.pc >= MEMORY_SIZE) || (state.pc < 0))
-    return 0;
+  if (std::getline(file, line)) {
+    std::istringstream iss(line);
+    if (!(iss >> state.pc) || state.pc >= MEMORY_SIZE || state.pc < 0) 
+      return 0;
+    
+  } else      
+      return 0;
 
   int num = 0;
   for (int offset = 0; offset < MEMORY_SIZE; ++offset) {
-    // PP: Why not read a number directly into a state.memory location?
-    // C++ by default assumes that your byte sized variable (e.g. state.memory[offset])
-    // is supposed to hold a character, so it might assume that you are trying to read an
-    // individual character from the file, not a number that fits in 8-bits.
-    // E.g. if your next number is '0', it might load memory[offset] = '0' (48).
-    // There are ways to force fscanf to read a number, but it will cause fewer
-    // issues down the line, if you use integers as temporary storage, which forces C++
-    // to read a number
-    read = fscanf(fp, "%d\n", &num);
-    if ((read != 1) || (num > ARCH_MAXVAL) || (num < 0))
-      return 0;
+    if (!std::getline(file, line) || line.empty()) {
+        return 0;
+    }
+
+    std::istringstream iss(line);
+    if (!(iss >> num) || !(iss >> std::ws).eof() || num > ARCH_MAXVAL || num < 0) {
+        return 0;
+    }
+
     state.memory[offset] = num;
   }
 
-  while (1) {
-    char name[MAX_NAME];
-    int read = fscanf(fp, "%d %s\n", &num, name);
-    // End of the file
-    if (read != 2)
-      break;
+  while (true) {
+    std::string name;
+    if (!(file >> num >> name)) {
+        if (file.eof()) break;
+        return 0;
+    }
 
-    // Wrong data (num is supposed to be an address)
-    if ((num < 0) || (num >= MEMORY_SIZE))
-      return 0;
-
-    // Try to insert the breakpoint and return fail if unsuccessful
+    if (num < 0 || num >= MEMORY_SIZE) 
+        return 0;
+    
     if (!insert_breakpoint(num, name))
       return 0;
   }
 
-  fclose(fp);
+  // while (1) {
+  //   char name[MAX_NAME];
+  //   int read = fscanf(fp, "%d %s\n", &num, name);
+  //   // End of the file
+  //   if (read != 2)
+  //     break;
+
+  //   // Wrong data (num is supposed to be an address)
+  //   if ((num < 0) || (num >= MEMORY_SIZE))
+  //     return 0;
+
+  //   // Try to insert the breakpoint and return fail if unsuccessful
+  //   if (!insert_breakpoint(num, name))
+  //     return 0;
+  // }
+
+  // FILE *fp = fopen(filename, "r");
+
+  // if (fp == NULL)
+  //   return 0;
+
+  // // Make sure that each fscanf reads the right number of items
+  // read = fscanf(fp, "%d\n", &total_cycles);
+  // if ((read != 1) || (total_cycles < 0))
+  //   return 0;
+
+  // read = fscanf(fp, "%d\n", &state.acc);
+  // if ((read != 1) || (state.acc > ARCH_MAXVAL) || (state.acc < 0))
+  //   return 0;
+
+  // read = fscanf(fp, "%d\n", &state.pc);
+  // if ((read != 1) || (state.pc >= MEMORY_SIZE) || (state.pc < 0))
+  //   return 0;
+
+  // int num = 0;
+  // for (int offset = 0; offset < MEMORY_SIZE; ++offset) {
+  //   // PP: Why not read a number directly into a state.memory location?
+  //   // C++ by default assumes that your byte sized variable (e.g. state.memory[offset])
+  //   // is supposed to hold a character, so it might assume that you are trying to read an
+  //   // individual character from the file, not a number that fits in 8-bits.
+  //   // E.g. if your next number is '0', it might load memory[offset] = '0' (48).
+  //   // There are ways to force fscanf to read a number, but it will cause fewer
+  //   // issues down the line, if you use integers as temporary storage, which forces C++
+  //   // to read a number
+  //   read = fscanf(fp, "%d\n", &num);
+  //   if ((read != 1) || (num > ARCH_MAXVAL) || (num < 0))
+  //     return 0;
+  //   state.memory[offset] = num;
+  // }
+
+  // while (1) {
+  //   char name[MAX_NAME];
+  //   int read = fscanf(fp, "%d %s\n", &num, name);
+  //   // End of the file
+  //   if (read != 2)
+  //     break;
+
+  //   // Wrong data (num is supposed to be an address)
+  //   if ((num < 0) || (num >= MEMORY_SIZE))
+  //     return 0;
+
+  //   // Try to insert the breakpoint and return fail if unsuccessful
+  //   if (!insert_breakpoint(num, name))
+  //     return 0;
+  // }
+
+  // fclose(fp);
   return 1;
 }
 
-int Emulator::save_state(const char* filename) const {
-  FILE* fp = fopen(filename, "w");
-
-  if (fp == NULL)
+int Emulator::save_state(std::string filename) const {
+  std::ofstream file(filename);
+  
+  if (!file) 
     return 0;
+  
+  file << total_cycles << std::endl;
+  file << state.acc << std::endl;
+  file << state.pc << std::endl;
 
-  fprintf(fp, "%d\n", total_cycles);
-  fprintf(fp, "%d\n", state.acc);
-  fprintf(fp, "%d\n", state.pc);
-
-  for (int offset = 0; offset < MEMORY_SIZE; ++offset) {
-    // PP: Use temporary variables for the same reason as in load_state
-    int num = state.memory[offset];
-    fprintf(fp, "%d\n", num);
-  }
-
+  for (int offset = 0; offset < MEMORY_SIZE; ++offset) 
+    file << state.memory[offset] << std::endl;
+  
   for (int idx = 0; idx < breakpoints_sz; ++idx)
-    fprintf(fp, "%d %s\n", breakpoints[idx].get_address(), breakpoints[idx].get_name());
+    file << breakpoints[idx].get_address() << " " << breakpoints[idx].get_name() << std::endl;
+  
 
-  fclose(fp);
+  file.close();
+  
+  // FILE* fp = fopen(filename, "w");
+
+  // if (fp == NULL)
+  //   return 0;
+
+  // fprintf(fp, "%d\n", total_cycles);
+  // fprintf(fp, "%d\n", state.acc);
+  // fprintf(fp, "%d\n", state.pc);
+
+  // for (int offset = 0; offset < MEMORY_SIZE; ++offset) {
+  //   // PP: Use temporary variables for the same reason as in load_state
+  //   int num = state.memory[offset];
+  //   fprintf(fp, "%d\n", num);
+  // }
+
+  // for (int idx = 0; idx < breakpoints_sz; ++idx)
+  //   fprintf(fp, "%d %s\n", breakpoints[idx].get_address(), breakpoints[idx].get_name());
+
+  // fclose(fp);
   
   return 1;
 }

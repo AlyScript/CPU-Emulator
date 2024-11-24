@@ -10,16 +10,26 @@
 // -----------------------------------------------------------------------------
 
 #include <inttypes.h>
+#include <stdlib.h>
+#include <iostream>
+#include <array>
 
 //------------------------------------------------------------------------------
 //--------------------               CONSTANTS              --------------------
 //------------------------------------------------------------------------------
-#define ARCH_BITS 8
-#define ARCH_BITMASK ((1 << ARCH_BITS) - 1)
-#define ARCH_MAXVAL ARCH_BITMASK
-#define INSTRUCTION_SIZE 2
-#define MEMORY_SIZE 256
-#define MAX_NAME 96
+// #define ARCH_BITS = 8;
+// #define ARCH_BITMASK ((1 << ARCH_BITS) - 1)
+// #define ARCH_MAXVAL ARCH_BITMASK
+// #define INSTRUCTION_SIZE 2
+// #define MEMORY_SIZE 256
+// #define MAX_NAME 96
+
+constexpr int ARCH_BITS = 8;
+constexpr int ARCH_BITMASK = (1 << ARCH_BITS) - 1;
+constexpr int ARCH_MAXVAL = ARCH_BITMASK;
+constexpr int INSTRUCTION_SIZE = 2;
+constexpr int MEMORY_SIZE = 256;
+constexpr int MAX_NAME = 96;
 
 
 //------------------------------------------------------------------------------
@@ -54,6 +64,14 @@
  */
 typedef int addr_t;
 
+/*
+* It makes more sense to use a short (2 Bytes) instead of int, since we can still address more than 256 locations -- int is wasteful
+* This would be the better practice:
+typedef struct {
+  short addr;
+} addr_t;
+*/
+
 /**
  * Use the type `data_t` for variables holding generic data.
  *
@@ -76,6 +94,8 @@ typedef uint8_t byte_t;
  * the testing code relies on this struct existing and being used in the right
  * places, so DON'T replace it.
  *
+ * Note, that instructions themselves are 2 Bytes--1 for Opcode and 1 for Operand
+ * 
  */
 struct InstructionData {
   byte_t opcode;
@@ -93,17 +113,18 @@ struct ProcessorState {
   /**
    * This is the only general purpose register.
    */
-  data_t acc;
+  data_t acc = 0;
 
   /**
    * Holds the address of the instruction to be executed next.
    */
-  addr_t pc;
+  addr_t pc = 0;
 
   /**
    * Byte array representing the memory of the system
    */
-  byte_t memory[MEMORY_SIZE];
+  // byte_t memory[MEMORY_SIZE];
+  std::array<byte_t, MEMORY_SIZE> memory{};
 
   /**
    * The default constructor.
@@ -111,10 +132,7 @@ struct ProcessorState {
    * There might be a more elegant way to achieve the same effect.
    */
   ProcessorState() {
-    acc = 0;
-    pc = 0;
-    for (int i = 0; i < MEMORY_SIZE; ++i)
-      memory[i] = 0;
+    
   }
 };
 
@@ -164,21 +182,21 @@ class InstructionBase {
      *
      * @param state the processor state we operate on
      */
-    void execute(ProcessorState& state) const;
+    virtual void execute(ProcessorState& state) const;
 
     /**
      * Convenience getter for _address
      *
      * @return The address associated with this instruction
      */
-    addr_t get_address() const;
+    virtual addr_t get_address() const;
 
     /** 
      * Generates a string describing the instruction
      *
      * @return the string (and its ownership)
      */
-    char* to_string() const;
+    virtual std::string to_string() const;
 
     /**
      * The instruction-specific functionality of executing an instruction.
@@ -196,7 +214,7 @@ class InstructionBase {
      * Subclasses provide the concrete, instruction-specific behaviour.
      * @return The instruction mnemonic
      */
-    virtual const char* name() const = 0;
+    virtual const std::string name() const = 0;
 
     /**
      * A class method translating opcodes into InstructionBase objects
@@ -218,6 +236,35 @@ class InstructionBase {
      * protected you can remove it, if your code does not need it.
      */
     InstructionBase() { };
+
+    /**
+     * I declare the destructor as default here to ensure that any derived classes will have their destructors called
+     * Behaviour would be undefined otherwise (the InstructionBase() destructor would be incorrectly called)
+    */
+    ~InstructionBase() = default;
+
+    // InstructionBase(InstructionBase &other) : _address(other._address) {
+
+    // }
+
+    InstructionBase& operator=(const InstructionBase &other) {
+      if (&other != this) {
+        _address = other._address;
+      }
+      return *this;
+    }
+
+    InstructionBase(InstructionBase &&other) noexcept : _address(other._address) {
+      other._address = 0;
+    } 
+
+    InstructionBase& operator=(InstructionBase &&other) noexcept {
+      if (&other != this) {
+        _address = other._address;
+        other._address = 0;
+      }
+      return *this;
+    }
 
     /**
      * A convenience protected setter for _address

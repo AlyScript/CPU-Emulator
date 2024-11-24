@@ -20,6 +20,7 @@
 // -----------------------------------------------------------------------------
 
 #include "common.h"
+#include "iostream"
 
 /** 
  * Enum representing the various opcodes.
@@ -46,8 +47,9 @@ enum InstructionOpcode {
 class Iadd : public InstructionBase{
   public:
     Iadd(addr_t address);
-    void _execute(ProcessorState& state) const;
-    const char* name() const;
+    // ~Iadd() override = default;
+    void _execute(ProcessorState& state) const override;
+    const std::string name() const override;
 };
 
 /**
@@ -56,8 +58,9 @@ class Iadd : public InstructionBase{
 class Iand : public InstructionBase{
   public:
     Iand(addr_t address);
-    void _execute(ProcessorState& state) const;
-    const char* name() const;
+    // virtual ~Iand() = default;
+    void _execute(ProcessorState& state) const override;
+    const std::string name() const override;
 };
 
 /**
@@ -66,8 +69,9 @@ class Iand : public InstructionBase{
 class Iorr : public InstructionBase{
   public:
     Iorr(addr_t address);
-    void _execute(ProcessorState& state) const;
-    const char* name() const;
+    // ~Iorr() override = default;
+    void _execute(ProcessorState& state) const override;
+    const std::string name() const override;
 };
 
 /**
@@ -76,8 +80,9 @@ class Iorr : public InstructionBase{
 class Ixor : public InstructionBase{
   public:
     Ixor(addr_t address);
-    void _execute(ProcessorState& state) const;
-    const char* name() const;
+    // ~Ixor() override = default;
+    void _execute(ProcessorState& state) const override;
+    const std::string name() const override;
 };
 
 /**
@@ -86,8 +91,9 @@ class Ixor : public InstructionBase{
 class Ildr : public InstructionBase{
   public:
     Ildr(addr_t address);
-    void _execute(ProcessorState& state) const;
-    const char* name() const;
+    // ~Ildr() override = default;
+    void _execute(ProcessorState& state) const override;
+    const std::string name() const override;
 };
 
 /**
@@ -96,8 +102,9 @@ class Ildr : public InstructionBase{
 class Istr : public InstructionBase{
   public:
     Istr(addr_t address);
-    void _execute(ProcessorState& state) const;
-    const char* name() const;
+    // ~Istr() override = default;
+    void _execute(ProcessorState& state) const override;
+    const std::string name() const override;
 };
 
 /**
@@ -106,8 +113,9 @@ class Istr : public InstructionBase{
 class Ijmp : public InstructionBase{
   public:
     Ijmp(addr_t address);
-    void _execute(ProcessorState& state) const;
-    const char* name() const;
+    // ~Ijmp() override = default;
+    void _execute(ProcessorState& state) const override;
+    const std::string name() const override;
 };
 
 /**
@@ -116,6 +124,7 @@ class Ijmp : public InstructionBase{
 class Ijne : public InstructionBase{
   public:
     Ijne(addr_t address);
-    void _execute(ProcessorState& state) const;
-    const char* name() const;
+    // ~Ijne() override = default;
+    void _execute(ProcessorState& state) const override;
+    const std::string name() const override;
 };

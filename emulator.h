@@ -21,6 +21,8 @@
 // -----------------------------------------------------------------------------
 
 #include "common.h"
+#include <iostream>
+#include <array>
 
 //------------------------------------------------------------------------------
 //--------------------               CONSTANTS              --------------------
@@ -53,7 +55,7 @@ class Breakpoint {
      * @param address The address on which we break
      * @param name A symbolic name for the breakpoint. We are not allowed to modify or take ownership of this string. The name can contain any alphanumeric character (no spaces allowed). The name is guaranteed to be valid (i.e. not null)
      */
-    Breakpoint(addr_t address, const char* name);
+    Breakpoint(addr_t address, const std::string& name);
 
     // Copy/Move Constructors
     Breakpoint(const Breakpoint& other);
@@ -71,7 +73,7 @@ class Breakpoint {
     /**
      * Getter for the name
      */
-    const char* get_name() const;
+    const std::string get_name() const;
 
     /**
      * Testing whether the breakpoint targets this address
@@ -81,11 +83,11 @@ class Breakpoint {
     /**
      * Testing whether the breakpoint targets this name
      */
-    int has(const char* name) const;
+    int has(const std::string&) const;
 
   private:
     addr_t _address;
-    char* _name;
+    std::string _name;
 };
 
 /**
@@ -184,7 +186,7 @@ class Emulator {
      * @param name The name of the breakpoints (non-owning pointer)
      * @return whether the operation was successful (1 means success, 0 failure)
      */
-    int insert_breakpoint(addr_t address, const char* name);
+    int insert_breakpoint(addr_t address, const std::string name);
 
     /**
      * Find the breakpoint with the given address in our breakpoint storage
@@ -200,7 +202,7 @@ class Emulator {
      * @param name The name of the breakpoint (non-owning pointer)
      * @return A non-owning pointer to the Breakpoint or null if the name was not found
      */
-    const Breakpoint* find_breakpoint(const char* name) const;
+    const Breakpoint* find_breakpoint(const std::string name) const;
 
     /**
      * Unregister the breakpoint with the given address
@@ -289,7 +291,7 @@ class Emulator {
      * @param state_filename A string containing the name of the file to read
      * @return 1 for success, 0 otherwise
      */
-    int load_state(const char* state_filename);
+    int load_state(const std::string state_filename);
 
     /**
      * Stores the processor state in a file, in the same format used by load_state
@@ -299,11 +301,12 @@ class Emulator {
      * @param state_filename A string containing the name of the file to write
      * @return 1 for success, 0 otherwise
      */
-    int save_state(const char* state_filename) const;
+    int save_state(const std::string state_filename) const;
   
   private:
     ProcessorState state;
     Breakpoint* breakpoints;
+    // std::array<Breakpoint, MAX_INSTRUCTIONS> breakpoints;
     int breakpoints_sz;
     int total_cycles;
 };

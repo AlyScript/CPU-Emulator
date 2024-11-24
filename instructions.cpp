@@ -2,9 +2,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <utility>
+#include <iostream>
+#include <sstream>
 #include "instructions.h"
 
 // ========== InstructionBase ==========
+
+
 void InstructionBase::execute(ProcessorState& state) const {
   // virtual call that implements the actual functionality of the instruction
   _execute(state);
@@ -25,33 +30,63 @@ void InstructionBase::_set_address(addr_t address) {
   _address = address & ARCH_BITMASK;
 }
 
-char* InstructionBase::to_string() const {
+std::string InstructionBase::to_string() const {
   // Having a malloc is definitely a bad sign
-  char* buffer = (char *) malloc(32);
+  std::stringstream result;
+
 
   // Figure out what the instruction actually is based on the return value of name()
   // and then generate an appropriate instruction-specific string
-  if (strncmp(name(), "ADD", 3) == 0)
-    sprintf(buffer, "%s: ACC <- ACC + [%d]", name(), get_address());
-  else if (strncmp(name(), "AND", 3) == 0)
-    sprintf(buffer, "%s: ACC <- ACC & [%d]", name(), get_address());
-  else if (strncmp(name(), "ORR", 3) == 0)
-    sprintf(buffer, "%s: ACC <- ACC | [%d]", name(), get_address());
-  else if (strncmp(name(), "XOR", 3) == 0)
-    sprintf(buffer, "%s: ACC <- ACC ^ [%d]", name(), get_address());
-  else if (strncmp(name(), "LDR", 3) == 0)
-    sprintf(buffer, "%s: ACC <- [%d]", name(), get_address());
-  else if (strncmp(name(), "STR", 3) == 0)
-    sprintf(buffer, "%s: ACC -> [%d]", name(), get_address());
-  else if (strncmp(name(), "JMP", 3) == 0)
-    sprintf(buffer, "%s: PC  <- %d", name(), get_address());
-  else if (strncmp(name(), "JNE", 3) == 0)
-    sprintf(buffer, "%s: PC  <- %d if ACC != 0", name(), get_address());
-  else
-    // This should never happen unless we have an error in name() or one of the strncmp's above
-    // i.e. the tests will never try to trigger this code
+  if (name() == "ADD") {
+    result << name() << ": ACC <- " << "ACC " << "+ [" << get_address() << "]";
+  }
+  else if (name() == "AND") {
+    result << name() << ": ACC <- " << "ACC " << "& [" << get_address() << "]";
+  }
+  else if (name() == "ORR") {
+    result << name() << ": ACC <- " << "ACC " << "| [" << get_address() << "]";
+  }
+  else if (name() == "XOR") {
+    result << name() << ": ACC <- " << "ACC " << "^ [" << get_address() << "]";
+  }
+  else if (name() == "LDR") {
+    result << name() << ": ACC <- [" << get_address() << "]";
+  }
+  else if (name() == "STR") {
+    result << name() << ": ACC -> [" << get_address() << "]";
+  }
+  else if (name() == "JMP") {
+    result << name() << ": PC  <- " << get_address() << "";
+  }
+  else if (name() == "JNE") {
+    result << name() << ": PC  <- " << get_address() << " if ACC != 0";
+  }
+  else {
+    std::cout << "issue";
     assert(0);
-  return buffer;
+  }
+
+  // if (strncmp(name(), "ADD", 3) == 0)
+  //   sprintf(buffer, "%s: ACC <- ACC + [%d]", name(), get_address()); // cout << name(): "ACC <- " << "ACC + " << get_address();
+  // else if (strncmp(name(), "AND", 3) == 0)
+  //   sprintf(buffer, "%s: ACC <- ACC & [%d]", name(), get_address());
+  // else if (strncmp(name(), "ORR", 3) == 0)
+  //   sprintf(buffer, "%s: ACC <- ACC | [%d]", name(), get_address());
+  // else if (strncmp(name(), "XOR", 3) == 0)
+  //   sprintf(buffer, "%s: ACC <- ACC ^ [%d]", name(), get_address());
+  // else if (strncmp(name(), "LDR", 3) == 0)
+    // sprintf(buffer, "%s: ACC <- [%d]", name(), get_address());
+  // else if (strncmp(name(), "STR", 3) == 0)
+    // sprintf(buffer, "%s: ACC -> [%d]", name(), get_address());
+  // else if (strncmp(name(), "JMP", 3) == 0)
+    // sprintf(buffer, "%s: PC  <- %d", name(), get_address());
+  // else if (strncmp(name(), "JNE", 3) == 0)
+    // sprintf(buffer, "%s: PC  <- %d if ACC != 0", name(), get_address());
+  // else
+  //   // This should never happen unless we have an error in name() or one of the strncmp's above
+  //   // i.e. the tests will never try to trigger this code
+  //   assert(0);
+  return result.str();
 }
 
 InstructionBase* InstructionBase::generateInstruction(InstructionData data) {
@@ -85,7 +120,7 @@ void Iadd::_execute(ProcessorState& state) const {
   state.acc += state.memory[get_address()];
 }
 
-const char* Iadd::name() const {
+const std::string Iadd::name() const {
   return "ADD";
 }
 
@@ -98,7 +133,7 @@ void Iand::_execute(ProcessorState& state) const {
   state.acc &= state.memory[get_address()];
 }
 
-const char* Iand::name() const {
+const std::string Iand::name() const {
   return "AND";
 }
 
@@ -111,7 +146,7 @@ void Iorr::_execute(ProcessorState& state) const {
   state.acc |= state.memory[get_address()];
 }
 
-const char* Iorr::name() const {
+const std::string Iorr::name() const {
   return "ORR";
 }
 
@@ -125,7 +160,7 @@ void Ixor::_execute(ProcessorState& state) const {
   state.acc ^= state.memory[get_address()];
 }
 
-const char* Ixor::name() const {
+const std::string Ixor::name() const {
   return "XOR";
 }
 
@@ -138,7 +173,7 @@ void Ildr::_execute(ProcessorState& state) const {
   state.acc = state.memory[get_address()];
 }
 
-const char* Ildr::name() const {
+const std::string Ildr::name() const {
   return "LDR";
 }
 
@@ -151,7 +186,7 @@ void Istr::_execute(ProcessorState& state) const {
   state.memory[get_address()] = state.acc;
 }
 
-const char* Istr::name() const {
+const std::string Istr::name() const {
   return "STR";
 }
 
@@ -169,7 +204,7 @@ void Ijmp::_execute(ProcessorState& state) const {
   state.pc = get_address() - 2;
 }
 
-const char* Ijmp::name() const {
+const std::string Ijmp::name() const {
   return "JMP";
 }
 
@@ -184,7 +219,7 @@ void Ijne::_execute(ProcessorState& state) const {
     state.pc = get_address() - 2;
 }
 
-const char* Ijne::name() const {
+const std::string Ijne::name() const {
   return "JNE";
 }
 
