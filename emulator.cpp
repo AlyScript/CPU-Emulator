@@ -9,7 +9,7 @@
 #include "emulator.h"
 
 // ============= Breakpoint ==============
-Breakpoint::Breakpoint() : _address(0), _name("") { }
+Breakpoint::Breakpoint() { }
 
 Breakpoint::Breakpoint(addr_t address, const std::string& name) 
     : _address(address & ARCH_BITMASK), _name(name) {
@@ -32,14 +32,14 @@ Breakpoint::Breakpoint(Breakpoint&& other) noexcept
 Breakpoint& Breakpoint::operator=(const Breakpoint& other) {
   if (this == &other)
     return *this;
-  _address = other._address;
-  _name = other._name;
+  _address = other.get_address();
+  _name = other.get_name();
   return *this;
 }
 
 // Move assignment
 Breakpoint& Breakpoint::operator=(Breakpoint&& other) noexcept {
-  if (&other != this) {
+  if (this != &other) {
     _address = std::move(other._address);
     _name = std::move(other._name);
 
@@ -105,7 +105,7 @@ Emulator& Emulator::operator=(const Emulator& other) {
     return *this;
 
   state = other.state;
-  breakpoints = {};
+  breakpoints = new Breakpoint[MAX_INSTRUCTIONS];
   breakpoints_sz = other.breakpoints_sz;
   total_cycles = other.total_cycles;
 
