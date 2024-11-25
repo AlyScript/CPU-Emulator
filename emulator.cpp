@@ -6,10 +6,11 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <memory>
 #include "emulator.h"
 
 // ============= Breakpoint ==============
-Breakpoint::Breakpoint() { }
+Breakpoint::Breakpoint() : _address(0), _name("") { }
 
 Breakpoint::Breakpoint(addr_t address, const std::string& name) 
     : _address(address & ARCH_BITMASK), _name(name) {
@@ -24,8 +25,8 @@ Breakpoint::Breakpoint(const Breakpoint& other)
 
 // Move constructor
 Breakpoint::Breakpoint(Breakpoint&& other) noexcept 
-    : _address(std::move(other._address)), _name(std::move(other._name)) {
-   
+    : _address(other._address), _name(std::move(other._name)) {
+  other._address = 0;
 }
 
 // Copy assignment
@@ -49,11 +50,11 @@ Breakpoint& Breakpoint::operator=(Breakpoint&& other) noexcept {
   return *this;
 }
 
-addr_t Breakpoint::get_address() const {
+const addr_t& Breakpoint::get_address() const {
   return _address;
 }
 
-const std::string Breakpoint::get_name() const {
+const std::string& Breakpoint::get_name() const {
   return _name;
 }
 
@@ -68,35 +69,31 @@ int Breakpoint::has(const std::string& name) const {
 // ============= Emulator ==============
 
 // ----------> Initialisation
-Emulator::Emulator() {
+Emulator::Emulator() : breakpoints() {
   state = ProcessorState();
 
   // An array as big as the max number of instructions we could ever have
   // This is obviously an overkill. Initialising the array to be shorter
   // is okay, as long as you can handle the worst case of MAX_INSTRUCTIONS
   // breakpoints
-  breakpoints = new Breakpoint[MAX_INSTRUCTIONS];
-  breakpoints_sz = 0;
-  total_cycles = 0;
+  // breakpoints = new Breakpoint[MAX_INSTRUCTIONS];
 }
 
 // Copy Constructor
-Emulator::Emulator(const Emulator& other) {
-  state = other.state;
-  breakpoints = new Breakpoint[MAX_INSTRUCTIONS];
-  breakpoints_sz = other.breakpoints_sz;
-  total_cycles = other.total_cycles;
-
-  for (int i = 0; i < breakpoints_sz; ++i)
-    breakpoints[i] = other.breakpoints[i];
+Emulator::Emulator(const Emulator& other)
+  : state(other.state), breakpoints(other.breakpoints), breakpoints_sz(other.breakpoints_sz), total_cycles(other.total_cycles) {
+  
 }
 
 // Move Constructor
-Emulator::Emulator(Emulator&& other) noexcept {
-  std::swap(state, other.state);
-  std::swap(breakpoints, other.breakpoints);
-  std::swap(breakpoints_sz, other.breakpoints_sz);
-  std::swap(total_cycles, other.total_cycles);
+Emulator::Emulator(Emulator&& other) noexcept
+  : state(std::move(other.state)),
+    breakpoints(std::move(other.breakpoints)),
+    breakpoints_sz(other.breakpoints_sz),
+    total_cycles(other.total_cycles) {
+  
+  other.breakpoints_sz = 0;
+  other.total_cycles = 0;
 }
 
 // Copy Assignment Operator
@@ -105,34 +102,37 @@ Emulator& Emulator::operator=(const Emulator& other) {
     return *this;
 
   state = other.state;
-  breakpoints = new Breakpoint[MAX_INSTRUCTIONS];
+  breakpoints = other.breakpoints;
   breakpoints_sz = other.breakpoints_sz;
   total_cycles = other.total_cycles;
 
-  for (int i = 0; i < breakpoints_sz; ++i)
-    breakpoints[i] = other.breakpoints[i];
   return *this;
 }
 
 // Move Assignment Operator
 Emulator& Emulator::operator=(Emulator&& other) noexcept {
-  std::swap(state, other.state);
-  std::swap(breakpoints, other.breakpoints);
-  std::swap(breakpoints_sz, other.breakpoints_sz);
-  std::swap(total_cycles, other.total_cycles);
+  if (this == &other)
+    return *this;
+
+  state = std::move(other.state);
+  breakpoints = std::move(other.breakpoints);
+  breakpoints_sz = other.breakpoints_sz;
+  total_cycles = other.total_cycles;
+
+  other.breakpoints_sz = 0;
+  other.total_cycles = 0;
+
   return *this;
 }
 
 // ----------> Main emulation loop
 
 InstructionData Emulator::fetch() const {
-  InstructionData data;
-  data.opcode = state.memory[state.pc];
-  data.address = state.memory[state.pc + 1];
-  return data;
+  return {state.memory.at(state.pc), state.memory.at(state.pc + 1)};
 }
 
-InstructionBase* Emulator::decode(InstructionData data) const {
+
+std::unique_ptr<InstructionBase> Emulator::decode(InstructionData data) const {
   // decode here is just a thin wrapper around generateInstruction()
   // In a more complex emulator, more things would happen here
   return InstructionBase::generateInstruction(data);
@@ -161,13 +161,13 @@ int Emulator::run(int steps) {
       return 0;
 
     // Fetch the next instruction from memory and transform it into an InstructionBase-derived object
-    InstructionBase* instr = decode(fetch());
+    std::unique_ptr<InstructionBase> instr = decode(fetch());
 
     if (instr == NULL)
       return 0;
 
     // What the function name says
-    int success = execute(instr);
+    int success = execute(instr.get());
 
     // Terminate if we didn't execute the instruction successfully
     if (success == 0)
@@ -198,7 +198,7 @@ int Emulator::insert_breakpoint(addr_t address, std::string name) {
     return 0;
 
   // Insert breakpoint and increment breakpoints_sz in a single step
-  breakpoints[breakpoints_sz++] = Breakpoint(address, name);
+  breakpoints.at(breakpoints_sz++) = Breakpoint(address, name);
   return 1;
 }
 
@@ -206,9 +206,9 @@ int Emulator::insert_breakpoint(addr_t address, std::string name) {
 const Breakpoint* Emulator::find_breakpoint(addr_t address) const {
   // iterate over all breakpoints
   for (int idx = 0; idx < breakpoints_sz; ++idx) {
-    if (breakpoints[idx].has(address)) {
+    if (breakpoints.at(idx).has(address)) {
       // if this one has the address we're looking for return it
-      return &breakpoints[idx];
+      return &breakpoints.at(idx);
     }
   }
   // indicates failure to find a breakpoint
@@ -218,8 +218,8 @@ const Breakpoint* Emulator::find_breakpoint(addr_t address) const {
 // Basically the same as above, but for the name
 const Breakpoint* Emulator::find_breakpoint(const std::string name) const {
   for (int idx = 0; idx < breakpoints_sz; ++idx) {
-    if (breakpoints[idx].has(name)) {
-      return &breakpoints[idx];
+    if (breakpoints.at(idx).has(name)) {
+      return &breakpoints.at(idx);
     }
   }
   return NULL;
@@ -237,14 +237,14 @@ int Emulator::delete_breakpoint(addr_t address) {
   // Urghh: C pointer magic to find the index of the breakpoint from its pointer
   // `found` is a pointer in the `breakpoints` array, so the difference of
   // `found` and `breakpoints` is the index of `found` in the array.
-  int found_idx = found - breakpoints;
+  int found_idx = found - breakpoints.data();
 
   // Move all breakpoints above found one position to the left, to fill the gap 
   for (int idx = found_idx; idx < breakpoints_sz; ++idx) {
     // This is an object assignment operation, assigning to breakpoints[idx]
     // the object currently in breakpoints[idx + 1]. Without std::move, this
     // would cause a copy
-    breakpoints[idx] = std::move(breakpoints[idx + 1]);
+    breakpoints.at(idx) = std::move(breakpoints.at(idx + 1));
   }
 
   return 1;
@@ -259,11 +259,11 @@ int Emulator::delete_breakpoint(const char* name) {
 
   --breakpoints_sz;
 
-  int found_idx = found - breakpoints;
+  int found_idx = found - breakpoints.data();
 
   // Move all breakpoints above found, one position to the left to fill the gap 
   for (int idx = found_idx; idx < breakpoints_sz; ++idx) {
-    breakpoints[idx] = std::move(breakpoints[idx + 1]);
+    breakpoints.at(idx) = std::move(breakpoints.at(idx + 1));
   }
 
   return 1;
@@ -290,7 +290,7 @@ addr_t Emulator::read_pc() const {
 addr_t Emulator::read_mem(addr_t address) const {
   // limit address to the allowed range of values
   address &= ARCH_BITMASK;
-  return state.memory[address];
+  return state.memory.at(address);
 }
 
 // ----------> Utilities
@@ -305,10 +305,8 @@ int Emulator::is_breakpoint() const {
 
 int Emulator::print_program() const {
   for (int offset = 0; offset < MEMORY_SIZE; offset += INSTRUCTION_SIZE) {
-    InstructionData data;
-    data.opcode = state.memory[offset];
-    data.address = state.memory[offset + 1];
-    InstructionBase* instr = decode(data);
+    InstructionData data{state.memory.at(offset), state.memory.at(offset + 1)};
+    std::unique_ptr<InstructionBase> instr = decode(data);
 
     if ((instr == NULL) || (data.opcode == 0 && data.address == 0)) {
       // printf("%d:\t%d\t%d\n", offset, data.opcode, data.address);
@@ -366,7 +364,7 @@ int Emulator::load_state(const std::string filename) {
         return 0;
     }
 
-    state.memory[offset] = num;
+    state.memory.at(offset) = num;
   }
 
   while (true) {
@@ -464,10 +462,10 @@ int Emulator::save_state(std::string filename) const {
   file << state.pc << std::endl;
 
   for (int offset = 0; offset < MEMORY_SIZE; ++offset) 
-    file << state.memory[offset] << std::endl;
+    file << state.memory.at(offset) << std::endl;
   
   for (int idx = 0; idx < breakpoints_sz; ++idx)
-    file << breakpoints[idx].get_address() << " " << breakpoints[idx].get_name() << std::endl;
+    file << breakpoints.at(idx).get_address() << " " << breakpoints.at(idx).get_name() << std::endl;
   
 
   file.close();

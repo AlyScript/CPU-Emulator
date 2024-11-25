@@ -5,6 +5,9 @@
 #include <utility>
 #include <iostream>
 #include <sstream>
+#include <unordered_map>
+#include <functional>
+#include <memory>
 #include "instructions.h"
 
 // ========== InstructionBase ==========
@@ -89,26 +92,25 @@ std::string InstructionBase::to_string() const {
   return result.str();
 }
 
-InstructionBase* InstructionBase::generateInstruction(InstructionData data) {
-  // This could be a switch-case, but it's not important
-  if (data.opcode == ADD)
-    return new Iadd(data.address);
-  if (data.opcode == AND)
-    return new Iand(data.address);
-  if (data.opcode == ORR)
-    return new Iorr(data.address);
-  if (data.opcode == XOR)
-    return new Ixor(data.address);
-  if (data.opcode == LDR)
-    return new Ildr(data.address);
-  if (data.opcode == STR)
-    return new Istr(data.address);
-  if (data.opcode == JMP)
-    return new Ijmp(data.address);
-  if (data.opcode == JNE)
-    return new Ijne(data.address);
+std::unique_ptr<InstructionBase> InstructionBase::generateInstruction(InstructionData data) {
+    if (data.opcode == ADD)
+        return std::make_unique<Iadd>(data.address);
+    if (data.opcode == AND)
+        return std::make_unique<Iand>(data.address);
+    if (data.opcode == ORR)
+        return std::make_unique<Iorr>(data.address);
+    if (data.opcode == XOR)
+        return std::make_unique<Ixor>(data.address);
+    if (data.opcode == LDR)
+        return std::make_unique<Ildr>(data.address);
+    if (data.opcode == STR)
+        return std::make_unique<Istr>(data.address);
+    if (data.opcode == JMP)
+        return std::make_unique<Ijmp>(data.address);
+    if (data.opcode == JNE)
+        return std::make_unique<Ijne>(data.address);
 
-  return NULL;
+    return nullptr;  // Return nullptr if the opcode is not found
 }
 
 // ========== ADD Instruction ==========
@@ -117,7 +119,7 @@ Iadd::Iadd(addr_t address) {
 }
 
 void Iadd::_execute(ProcessorState& state) const {
-  state.acc += state.memory[get_address()];
+  state.acc += state.memory.at(get_address());
 }
 
 const std::string Iadd::name() const {
@@ -130,7 +132,7 @@ Iand::Iand(addr_t address) {
 }
 
 void Iand::_execute(ProcessorState& state) const {
-  state.acc &= state.memory[get_address()];
+  state.acc &= state.memory.at(get_address());
 }
 
 const std::string Iand::name() const {
@@ -142,8 +144,9 @@ Iorr::Iorr(addr_t address) {
   _set_address(address);
 }
 
-void Iorr::_execute(ProcessorState& state) const {
-  state.acc |= state.memory[get_address()];
+void Iorr::_execute(ProcessorState &state) const
+{
+    state.acc |= state.memory.at(get_address());
 }
 
 const std::string Iorr::name() const {
@@ -157,7 +160,7 @@ Ixor::Ixor(addr_t address) {
 
 
 void Ixor::_execute(ProcessorState& state) const {
-  state.acc ^= state.memory[get_address()];
+  state.acc ^= state.memory.at(get_address());
 }
 
 const std::string Ixor::name() const {
@@ -170,7 +173,7 @@ Ildr::Ildr(addr_t address) {
 }
 
 void Ildr::_execute(ProcessorState& state) const {
-  state.acc = state.memory[get_address()];
+  state.acc = state.memory.at(get_address());
 }
 
 const std::string Ildr::name() const {
@@ -183,7 +186,7 @@ Istr::Istr(addr_t address) {
 }
 
 void Istr::_execute(ProcessorState& state) const {
-  state.memory[get_address()] = state.acc;
+  state.memory.at(get_address()) = state.acc;
 }
 
 const std::string Istr::name() const {

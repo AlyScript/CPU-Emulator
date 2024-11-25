@@ -23,6 +23,7 @@
 #include "common.h"
 #include <iostream>
 #include <array>
+#include <memory>
 
 //------------------------------------------------------------------------------
 //--------------------               CONSTANTS              --------------------
@@ -65,15 +66,17 @@ class Breakpoint {
     Breakpoint& operator=(const Breakpoint& other);
     Breakpoint& operator=(Breakpoint&& other) noexcept;
 
+    ~Breakpoint() = default;
+
     /**
      * Getter for the address
      */
-    addr_t get_address() const;
+    const addr_t& get_address() const;
 
     /**
      * Getter for the name
      */
-    const std::string get_name() const;
+    const std::string& get_name() const;
 
     /**
      * Testing whether the breakpoint targets this address
@@ -140,7 +143,7 @@ class Emulator {
      */
     Emulator& operator=(Emulator&& other) noexcept;
 
-
+    ~Emulator() = default;
 
     // ----------> Main emulation loop
 
@@ -157,7 +160,7 @@ class Emulator {
      * @param instruction The byte representation of the instruction
      * @return an **owning** object pointer inheriting from InstructionBase that has a) the dynamic type indicated by the instruction opcode and b) the target address indicated by the instruction's second byte
      */
-    InstructionBase* decode(InstructionData instruction) const;
+    std::unique_ptr<InstructionBase> decode(InstructionData instruction) const;
 
     /**
      * A simple function just calling the instructions execute function
@@ -305,8 +308,8 @@ class Emulator {
   
   private:
     ProcessorState state;
-    Breakpoint* breakpoints;
-    // std::array<Breakpoint, MAX_INSTRUCTIONS> breakpoints;
-    int breakpoints_sz;
-    int total_cycles;
+    // Breakpoint* breakpoints;
+    std::array<Breakpoint, MAX_INSTRUCTIONS> breakpoints;
+    int breakpoints_sz{0};
+    int total_cycles{0};
 };

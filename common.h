@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <array>
+#include <memory>
 
 //------------------------------------------------------------------------------
 //--------------------               CONSTANTS              --------------------
@@ -170,6 +171,12 @@ struct ProcessorState {
 class InstructionBase {
   public:
     /**
+    * I declare the destructor as default here to ensure that any derived classes will have their destructors called
+    * Behaviour would be undefined otherwise (the InstructionBase() destructor would be incorrectly called)
+    */
+    virtual ~InstructionBase() = default;
+
+    /**
      * Modifies the system state by executing the instruction
      *
      * This is a wrapper around _execute() which is virtual and unimplemented
@@ -225,7 +232,7 @@ class InstructionBase {
      * @param opcode A number identifying the type of the instruction
      * @return A pointer to an object whose dynamic type matches the type requested
      */
-    static InstructionBase* generateInstruction(InstructionData data);
+    static std::unique_ptr<InstructionBase> generateInstruction(InstructionData data);
 
   protected:
     /**
@@ -237,16 +244,19 @@ class InstructionBase {
      */
     InstructionBase() { };
 
-    /**
-     * I declare the destructor as default here to ensure that any derived classes will have their destructors called
-     * Behaviour would be undefined otherwise (the InstructionBase() destructor would be incorrectly called)
-    */
-    ~InstructionBase() = default;
+    
 
-    // InstructionBase(InstructionBase &other) : _address(other._address) {
+    // Copy Constructor
+    InstructionBase(InstructionBase &other) : _address(other._address) {
+      
+    }
 
-    // }
+    // Move Constructor
+    InstructionBase(InstructionBase &&other) noexcept : _address(other._address) {
+      other._address = 0;
+    } 
 
+    // Copy Assignment
     InstructionBase& operator=(const InstructionBase &other) {
       if (&other != this) {
         _address = other._address;
@@ -254,10 +264,7 @@ class InstructionBase {
       return *this;
     }
 
-    InstructionBase(InstructionBase &&other) noexcept : _address(other._address) {
-      other._address = 0;
-    } 
-
+    // Move Assignment
     InstructionBase& operator=(InstructionBase &&other) noexcept {
       if (&other != this) {
         _address = other._address;
@@ -280,5 +287,5 @@ class InstructionBase {
     void _set_address(addr_t address);
 
   private:
-    addr_t _address;
+    addr_t _address = 0;
 };

@@ -21,6 +21,7 @@
 
 #include "common.h"
 #include "iostream"
+#include "memory"
 
 /** 
  * Enum representing the various opcodes.
@@ -47,7 +48,6 @@ enum InstructionOpcode {
 class Iadd : public InstructionBase{
   public:
     Iadd(addr_t address);
-    // ~Iadd() override = default;
     void _execute(ProcessorState& state) const override;
     const std::string name() const override;
 };
@@ -58,7 +58,6 @@ class Iadd : public InstructionBase{
 class Iand : public InstructionBase{
   public:
     Iand(addr_t address);
-    // virtual ~Iand() = default;
     void _execute(ProcessorState& state) const override;
     const std::string name() const override;
 };
@@ -69,7 +68,6 @@ class Iand : public InstructionBase{
 class Iorr : public InstructionBase{
   public:
     Iorr(addr_t address);
-    // ~Iorr() override = default;
     void _execute(ProcessorState& state) const override;
     const std::string name() const override;
 };
@@ -80,7 +78,6 @@ class Iorr : public InstructionBase{
 class Ixor : public InstructionBase{
   public:
     Ixor(addr_t address);
-    // ~Ixor() override = default;
     void _execute(ProcessorState& state) const override;
     const std::string name() const override;
 };
@@ -91,7 +88,6 @@ class Ixor : public InstructionBase{
 class Ildr : public InstructionBase{
   public:
     Ildr(addr_t address);
-    // ~Ildr() override = default;
     void _execute(ProcessorState& state) const override;
     const std::string name() const override;
 };
@@ -102,7 +98,6 @@ class Ildr : public InstructionBase{
 class Istr : public InstructionBase{
   public:
     Istr(addr_t address);
-    // ~Istr() override = default;
     void _execute(ProcessorState& state) const override;
     const std::string name() const override;
 };
@@ -110,10 +105,9 @@ class Istr : public InstructionBase{
 /**
  * Class representing an unconditional JMP
  */
-class Ijmp : public InstructionBase{
-  public:
+class Ijmp : public InstructionBase {
+public:
     Ijmp(addr_t address);
-    // ~Ijmp() override = default;
     void _execute(ProcessorState& state) const override;
     const std::string name() const override;
 };
@@ -124,7 +118,6 @@ class Ijmp : public InstructionBase{
 class Ijne : public InstructionBase{
   public:
     Ijne(addr_t address);
-    // ~Ijne() override = default;
     void _execute(ProcessorState& state) const override;
     const std::string name() const override;
 };
